@@ -104,7 +104,7 @@ def sparse_tuple_from(sequences, dtype=np.int32):
     values = []
     
     for n, seq in enumerate(sequences):
-        indices.extend(zip([n] * len(seq), xrange(len(seq))))
+        indices.extend(zip([n] * len(seq), list(range(len(seq)))))
         values.extend(seq)
  
     indices = np.asarray(indices, dtype=np.int64)
@@ -142,12 +142,12 @@ def get_next_batch(batch_size=128):
 
     for i in range(batch_size):
         #生成不定长度的字串
-        image, text, vec = obj.gen_image(True)
+        image, text, vec = obj.gen_image()
         #np.transpose 矩阵转置 (32*256,) => (32,256) => (256,32)
         inputs[i,:] = np.transpose(image.reshape((OUTPUT_SHAPE[0],OUTPUT_SHAPE[1])))
         codes.append(list(text))
     targets = [np.asarray(i) for i in codes]
-    print targets
+    # print(targets)
     sparse_targets = sparse_tuple_from(targets)
     #(batch_size,) 值都是256
     seq_len = np.ones(inputs.shape[0]) * OUTPUT_SHAPE[1]
@@ -208,6 +208,7 @@ def get_train_model():
     outputs, _ = tf.nn.dynamic_rnn(cell, inputs, seq_len, dtype=tf.float32)
     
     shape = tf.shape(inputs)
+
     batch_s, max_timesteps = shape[0], shape[1]
     
     outputs = tf.reshape(outputs, [-1, num_hidden])
@@ -262,7 +263,7 @@ def train():
         
         #print b_loss
         #print b_targets, b_logits, b_seq_len
-        print b_cost, steps
+        print("do_batch ",b_cost, steps)
         if steps > 0 and steps % REPORT_STEPS == 0:
             do_report()
             #save_path = saver.save(session, "ocr.model", global_step=steps)
@@ -272,10 +273,10 @@ def train():
     with tf.Session() as session:
         session.run(init)
         saver = tf.train.Saver(tf.global_variables(), max_to_keep=100)
-        for curr_epoch in xrange(num_epochs):
+        for curr_epoch in range(num_epochs):
             print("Epoch.......", curr_epoch)
             train_cost = train_ler = 0
-            for batch in xrange(BATCHES):
+            for batch in range(BATCHES):
                 start = time.time()
                 c, steps = do_batch()
                 train_cost += c * BATCH_SIZE
@@ -295,6 +296,6 @@ def train():
             print(log.format(curr_epoch + 1, num_epochs, steps, train_cost, train_ler, val_cost, val_ler, time.time() - start, lr))
 
 if __name__ == '__main__':
-    inputs, sparse_targets,seq_len = get_next_batch(2)
-    #decode_sparse_tensor(sparse_targets);
-    #train()
+    inputs, sparse_targets,seq_len = get_next_batch(10)
+    # decode_sparse_tensor(sparse_targets)
+    train()
